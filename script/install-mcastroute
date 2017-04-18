@@ -1,0 +1,55 @@
+#!/bin/bash
+
+set -e
+
+if [ -z "$1" ]; then
+	interface=eth1
+else
+	interface="$1"
+	shift
+fi
+
+if [ "$interface" != "eth0" ] && [ "$interface" != "eth1" ] && [ "$interface" != "enp0s8" ] && [ "$interface" != "ens33" ]; then
+	echo "Unexpected interface name '$interface'" >&2
+	exit 1
+fi
+
+file=/etc/network/interfaces
+lead='## BEGIN MCASTROUTE'
+tail='## END MCASTROUTE'
+routecmd="route add -net 224.0.0.0/4 dev $interface"
+route="up $routecmd"
+
+# Remove the marked block.
+echo "Installing multicast route via $interface"
+sed -ie "/^$lead$/,/^$tail$/d" $file
+
+
+# Add it back at the end.
+cat <<EOF >>$file
+$lead
+$route
+$tail
+EOF
+
+# Install mDNS and avahi.
+if ! dpkg -l avahi-daemon avahi-utils libnss-mdns crudini 2>/dev/null 1>&2; then
+	apt-get update -qq
+	apt-get install -qqy avahi-daemon avahi-utils libnss-mdns crudini
+fi
+
+cini="crudini --format=sh"
+echo "Forcing avahi-daemon to use $interface"
+$cini --set /etc/avahi/avahi-daemon.conf server allow-interfaces "$interface"
+echo "Disabling IPv6 for avahi-daemon"
+$cini --set /etc/avahi/avahi-daemon.conf server use-ipv6 no
+# Fix crudini's output - avahi can't handle space before the '='.
+perl -i -pe 's/^([a-z-_]+)\s+=\s*/\1=/' /etc/avahi/avahi-daemon.conf
+
+# echo "Restarting networking"
+# systemctl restart networking.service
+
+echo "Manually adding multicast route (this boot only)"
+$routecmd
+echo "Restarting avahi-daemon"
+systemctl restart avahi-daemon.service

@@ -1,0 +1,18 @@
+#!/bin/bash
+
+set -e -u
+
+docker pull andrelucas/stcli:latest |cat
+
+ip=$(avahi-resolve-host-name -4 "$(hostname -s).local" | cut -f2)
+
+stbin=/usr/local/bin/stcli
+cat <<EOF >$stbin
+#!/bin/bash
+user=${STORAGEOS_USERNAME:-storageos}
+pass=${STORAGEOS_PASSWORD:-storageos}
+host="$ip"
+exec docker run andrelucas/stcli:latest -u \$user -p \$pass -H \$host \$*
+EOF
+chown root:root $stbin
+chmod 0755 $stbin

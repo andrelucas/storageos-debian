@@ -1,0 +1,14 @@
+#!/bin/bash
+
+set -e
+
+if ! which curl >/dev/null; then
+    apt-get -qqy install curl
+fi
+
+# Install Docker.
+if [ ! -f /usr/bin/docker ]; then
+  curl -fsSL https://get.docker.com/ | sh
+fi
+
+usermod -a -G docker vagrant

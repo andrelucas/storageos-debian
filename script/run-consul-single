@@ -1,0 +1,21 @@
+#!/bin/bash
+
+set -e
+
+# num_nodes=1
+
+# hostname=$(hostname)
+ip=$(avahi-resolve-host-name -4 "$(hostname -s).local" | cut -f2)
+
+
+echo "Starting consul on $ip"
+docker rm -f consul || true
+docker pull consul | cat
+docker run -d --name consul --net=host consul agent \
+    -server \
+    -bind="${ip}" \
+    -client=0.0.0.0 \
+    -bootstrap-expect=1
+sleep 1
+echo "Querying local consul agent"
+docker exec consul consul info | egrep 'version ='

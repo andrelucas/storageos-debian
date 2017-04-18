@@ -1,0 +1,26 @@
+#!/bin/bash
+
+set -e
+
+# Create docker login cached-credentials
+install -m 0700 -o root -g root -d /root/.docker
+cat >/root/.docker/config.json <<EOF
+{
+	"auths": {
+		"https://index.docker.io/v1/": {
+			"auth": "c3RvcmFnZW9zcm86VlRIcno5dVVqRXpS"
+		},
+		"quay.io": {
+			"auth": "c3RvcmFnZW9zK2ltYWdlOjhJSVg2OEJUSjhLNFdCSkJRRDUyQVZBUTBFMTBBQTdVOU1MNjNDUVpCNkQ0M0E4VEVEUEdKWlFRTUNUNk41VEM=",
+			"email": "."
+		}
+	}
+}
+EOF
+chmod 600 /root/.docker/config.json
+
+# Also for the vagrant user
+install -m 0700 -o vagrant -g vagrant -d ~vagrant/.docker
+cp /root/.docker/config.json ~vagrant/.docker/config.json
+chown vagrant:vagrant ~vagrant/.docker/config.json
+chmod 600 ~vagrant/.docker/config.json
